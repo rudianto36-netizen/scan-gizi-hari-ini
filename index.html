@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MBG - Deteksi Gizi AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "@google/generative-ai": "https://esm.run/@google/generative-ai"
+        }
+      }
+    </script>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans">
+
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg flex flex-col">
+        <header class="p-4 bg-green-600 text-white text-center rounded-b-2xl shadow-md">
+            <h1 class="text-xl font-bold">Program Makan Bergizi</h1>
+            <p class="text-xs opacity-90">Analisis Gizi Real-time via Gemini AI</p>
+        </header>
+
+        <div class="flex-1 p-4 flex flex-col items-center justify-center">
+            <div class="relative w-full aspect-square bg-black rounded-2xl overflow-hidden shadow-inner">
+                <video id="webcam" autoplay playsinline muted class="w-full h-full object-cover"></video>
+                <canvas id="canvas" class="hidden"></canvas>
+                
+                <div class="absolute inset-0 border-2 border-dashed border-white/50 m-12 rounded-xl pointer-events-none"></div>
+            </div>
+
+            <button id="btnAmbil" class="mt-6 w-20 h-20 bg-red-500 rounded-full border-8 border-gray-200 shadow-lg active:scale-95 transition-transform"></button>
+            <p class="mt-2 text-sm text-gray-500">Ketuk untuk foto makanan</p>
+        </div>
+
+        <div id="panelHasil" class="hidden p-6 bg-white border-t-2 rounded-t-3xl shadow-[0_-10px_20px_rgba(0,0,0,0.05)]">
+            <h2 class="text-lg font-bold text-gray-800 mb-3">Hasil Analisis:</h2>
+            <div id="loading" class="text-center py-4">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+                <p class="text-sm mt-2">AI sedang menghitung gizi...</p>
+            </div>
+            <div id="kontenHasil" class="text-gray-700 text-sm leading-relaxed whitespace-pre-line"></div>
+            <button onclick="resetApp()" class="mt-4 w-full py-2 bg-gray-200 rounded-lg text-sm font-semibold">Foto Ulang</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { GoogleGenerativeAI } from "@google/generative-ai";
+
+        const API_KEY = "AIzaSyBW0-WvVCUTRYckfuHJiEHXHlZfvbIZlOw"; 
+        const genAI = new GoogleGenerativeAI(API_KEY);
+
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('canvas');
+        const btnAmbil = document.getElementById('btnAmbil');
+        const panelHasil = document.getElementById('panelHasil');
+        const kontenHasil = document.getElementById('kontenHasil');
+        const loading = document.getElementById('loading');
+
+        // 1. Jalankan Kamera
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment" }, 
+                    audio: false 
+                });
+                video.srcObject = stream;
+            } catch (err) {
+                alert("Kamera gagal diakses. Pastikan gunakan HTTPS atau localhost.");
+                console.error(err);
+            }
+        }
+
+        // 2. Ambil Foto & Kirim ke AI
+        btnAmbil.addEventListener('click', async () => {
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0);
+
+            const base64Image = canvas.toDataURL('image/jpeg').split(',')[1];
+            
+            panelHasil.classList.remove('hidden');
+            kontenHasil.innerText = "";
+            loading.classList.remove('hidden');
+
+            try {
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                const prompt = "Analisis makanan ini untuk program Makan Bergizi Gratis. Berikan perkiraan: Nama makanan, Kalori, Protein, Karbohidrat, Lemak. Terakhir berikan kesimpulan apakah layak dikonsumsi atau tidak (cek tanda basi/layak). Jawab dalam bahasa Indonesia yang ringkas.";
+
+                const result = await model.generateContent([
+                    prompt,
+                    { inlineData: { data: base64Image, mimeType: "image/jpeg" } }
+                ]);
+                
+                const response = await result.response;
+                kontenHasil.innerText = response.text();
+            } catch (err) {
+                kontenHasil.innerText = "Gagal menganalisis: " + err.message;
+            } finally {
+                loading.classList.add('hidden');
+            }
+        });
+
+        window.resetApp = () => {
+            panelHasil.classList.add('hidden');
+        };
+
+        startCamera();
+    </script>
+</body>
+</html>
