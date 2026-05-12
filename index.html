@@ -85,7 +85,7 @@
             loading.classList.remove('hidden');
 
             try {
-                const model = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
                 const prompt = "Analisis makanan ini untuk program Makan Bergizi Gratis. Berikan perkiraan: Nama makanan, Kalori, Protein, Karbohidrat, Lemak. Terakhir berikan kesimpulan apakah layak dikonsumsi atau tidak (cek tanda basi/layak). Jawab dalam bahasa Indonesia yang ringkas.";
 
                 const result = await model.generateContent([
